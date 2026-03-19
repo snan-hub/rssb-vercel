@@ -6,6 +6,6 @@
     { "source": "/api/search", "destination": "/api/search" },
     { "source": "/api/scan-log", "destination": "/api/scan-log" },
     { "source": "/api/export", "destination": "/api/export" },
-    { "source": "/(.*)", "destination": "/public/index.html" }
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
