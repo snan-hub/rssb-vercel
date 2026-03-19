@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RSSB Video Monitor</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Source+Sans+3:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#08080f; --surface:#111120; --border:#1e1e38;
+    --accent:#c0392b; --accent2:#e8d5a3; --text:#e0e0f0; --muted:#666688;
+    --green:#4ade80; --orange:#fb923c; --purple:#e879f9; --red:#f87171; --blue:#60a5fa; --yellow:#fbbf24;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Source Sans 3',sans-serif;min-height:100vh;}
+
+  header{background:linear-gradient(180deg,#14142a,#0d0d1a);border-bottom:1px solid var(--border);padding:16px 28px;position:sticky;top:0;z-index:100;}
+  .header-top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;max-width:1100px;margin:0 auto;}
+  .logo-label{color:var(--accent);font-size:10px;letter-spacing:0.25em;font-weight:700;}
+  .logo-title{font-family:'Playfair Display',serif;font-size:20px;color:var(--accent2);}
+  .header-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+
+  .tabs{display:flex;border-bottom:1px solid var(--border);margin-top:14px;max-width:1100px;margin-left:auto;margin-right:auto;}
+  .tab{background:none;border:none;padding:8px 20px;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;font-family:'Source Sans 3',sans-serif;}
+  .tab.active{color:var(--text);border-bottom-color:var(--accent);}
+
+  main{max-width:1100px;margin:0 auto;padding:20px 28px 60px;}
+
+  /* STATS */
+  .stats-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;cursor:pointer;transition:border-color 0.2s;min-width:90px;}
+  .stat-card:hover{border-color:#3a3a58;}
+  .stat-card.active{border-color:var(--accent);background:rgba(192,57,43,0.1);}
+  .stat-num{font-size:22px;font-weight:700;font-family:'Playfair Display',serif;}
+  .stat-label{font-size:10px;color:var(--muted);letter-spacing:0.08em;margin-top:2px;}
+
+  /* BUTTONS */
+  .btn{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;font-family:'Source Sans 3',sans-serif;transition:all 0.2s;text-decoration:none;display:inline-block;}
+  .btn-primary{background:var(--accent);color:#fff;}
+  .btn-primary:hover{background:#a93226;}
+  .btn-primary:disabled{background:#333;cursor:not-allowed;}
+  .btn-outline{background:none;border:1px solid var(--border);color:var(--muted);}
+  .btn-outline:hover{border-color:#444;color:var(--text);}
+  .btn-yellow{background:rgba(251,191,36,0.15);border:1px solid #92400e;color:var(--yellow);}
+  .btn-sm{padding:5px 12px;font-size:11px;}
+
+  /* CONTROLS ROW */
+  .controls-row{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;}
+  .search-input{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:'Source Sans 3',sans-serif;outline:none;min-width:220px;}
+  .search-input:focus{border-color:var(--accent);}
+  .filter-select{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;font-family:'Source Sans 3',sans-serif;cursor:pointer;}
+
+  /* BULK BAR */
+  .bulk-bar{background:#1a1a2e;border:1px solid #3a3a58;border-radius:10px;padding:12px 16px;margin-bottom:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  .bulk-bar span{color:var(--accent2);font-size:13px;font-weight:700;}
+
+  /* VIDEO CARDS */
+  .results{display:flex;flex-direction:column;gap:8px;}
+  .video-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start;transition:border-color 0.2s;}
+  .video-card:hover{border-color:#2a2a48;}
+  .video-card.selected{border-color:var(--accent);background:rgba(192,57,43,0.05);}
+  .video-card.is-new{border-left:3px solid var(--yellow);}
+
+  .card-check{padding-top:2px;flex-shrink:0;}
+  .card-check input{width:16px;height:16px;cursor:pointer;accent-color:var(--accent);}
+
+  .video-thumb{flex-shrink:0;position:relative;}
+  .video-thumb img{width:130px;height:73px;object-fit:cover;border-radius:6px;display:block;}
+  .new-dot{position:absolute;top:-5px;right:-5px;background:var(--yellow);color:#000;font-size:9px;font-weight:900;padding:2px 5px;border-radius:8px;}
+
+  .video-info{flex:1;min-width:0;}
+  .video-title{color:var(--accent2);font-size:13px;font-weight:700;text-decoration:none;display:block;margin-bottom:4px;line-height:1.3;}
+  .video-title:hover{color:#fff;}
+  .video-meta{color:var(--muted);font-size:11px;margin-bottom:5px;line-height:1.8;}
+  .channel-link{color:var(--blue);text-decoration:none;font-weight:600;}
+  .channel-link:hover{text-decoration:underline;}
+  .about-link{color:#888;font-size:10px;text-decoration:none;border:1px solid #333;padding:1px 6px;border-radius:4px;margin-left:4px;}
+  .about-link:hover{color:var(--text);border-color:#555;}
+  .sep{margin:0 5px;color:#2a2a48;}
+
+  /* PRIORITY BADGE */
+  .priority-badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:800;letter-spacing:0.08em;border:1px solid;}
+  .priority-HIGH{color:#f87171;border-color:#991b1b;background:rgba(248,113,113,0.1);}
+  .priority-MEDIUM{color:#fb923c;border-color:#9a3412;background:rgba(251,146,60,0.1);}
+  .priority-LOW{color:#4ade80;border-color:#166534;background:rgba(74,222,128,0.1);}
+
+  .status-badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:0.05em;border:1px solid;}
+  .status-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:4px;}
+
+  .video-actions{flex-shrink:0;display:flex;flex-direction:column;gap:5px;}
+  .status-select-card{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;font-family:'Source Sans 3',sans-serif;color:var(--muted);cursor:pointer;width:100%;}
+  .btn-watch{text-align:center;background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 10px;font-size:11px;text-decoration:none;display:block;}
+  .btn-watch:hover{border-color:#444;color:var(--text);}
+  .btn-delete{background:none;border:1px solid #3a1a1a;color:var(--red);border-radius:6px;padding:5px 10px;cursor:pointer;font-size:11px;font-family:'Source Sans 3',sans-serif;}
+  .notes-input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text);font-size:11px;font-family:'Source Sans 3',sans-serif;margin-top:5px;resize:none;}
+
+  /* SEARCH TAB */
+  .search-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:16px;}
+  .presets-label{color:var(--muted);font-size:10px;letter-spacing:0.1em;margin-bottom:8px;}
+  .presets{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
+  .preset-btn{background:none;border:1px solid var(--border);color:var(--muted);border-radius:20px;padding:4px 12px;font-size:12px;cursor:pointer;font-family:'Source Sans 3',sans-serif;transition:all 0.15s;}
+  .preset-btn:hover,.preset-btn.active{border-color:var(--accent);color:var(--accent2);background:rgba(192,57,43,0.1);}
+  .search-row{display:flex;gap:10px;margin-bottom:12px;}
+  .search-result-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start;}
+  .btn-save-card{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:5px 12px;font-weight:700;font-size:11px;cursor:pointer;font-family:'Source Sans 3',sans-serif;white-space:nowrap;}
+  .btn-save-card.saved{background:#0d2e1a;border:1px solid #166534;color:var(--green);}
+  .official-badge{background:#1a2e1a;border:1px solid #166534;color:var(--green);padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;}
+
+  .empty{text-align:center;padding:50px 20px;color:#444;}
+  .empty-icon{font-size:36px;margin-bottom:10px;}
+  .spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-right:5px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .error-box{background:#2e0d0d;border:1px solid #7f1d1d;border-radius:10px;padding:10px 14px;color:var(--red);margin-bottom:14px;font-size:13px;}
+  .success-box{background:#0d2e1a;border:1px solid #166534;border-radius:10px;padding:10px 14px;color:var(--green);margin-bottom:14px;font-size:13px;}
+  .load-more{background:none;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:10px;cursor:pointer;font-size:13px;width:100%;margin-top:8px;font-family:'Source Sans 3',sans-serif;}
+
+  .sub-count{color:var(--yellow);font-weight:700;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <div>
+      <div class="logo-label">▶ RSSB CONTENT MONITOR</div>
+      <div class="logo-title">Video Intelligence Hub</div>
+    </div>
+    <div class="header-actions">
+      <span id="last-scan-label" style="color:var(--muted);font-size:11px"></span>
+      <button class="btn btn-yellow" id="autoscan-btn" onclick="runAutoScan()">⚡ Scan All Terms</button>
+      <a href="/api/export" class="btn btn-outline">⬇ Export CSV</a>
+    </div>
+  </div>
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('database')">🗄 Database</button>
+    <button class="tab" onclick="showTab('search')">🔍 Manual Search</button>
+  </div>
+</header>
+
+<main>
+  <div id="scan-progress" style="display:none" class="success-box"><span class="spinner"></span> <span id="scan-progress-text">Scanning all search terms...</span></div>
+  <div id="scan-result" style="display:none"></div>
+  <div id="error-global" style="display:none" class="error-box"></div>
+
+  <!-- DATABASE TAB -->
+  <div id="tab-database">
+    <div class="stats-row">
+      <div class="stat-card active" onclick="filterByStatus('All')" id="stat-all"><div class="stat-num" style="color:var(--accent2)" id="stat-total">0</div><div class="stat-label">TOTAL</div></div>
+      <div class="stat-card" onclick="filterByStatus('Unreviewed')" id="stat-unreviewed"><div class="stat-num" style="color:var(--muted)" id="stat-unreviewed-n">0</div><div class="stat-label">UNREVIEWED</div></div>
+      <div class="stat-card" onclick="filterByStatus('Unauthorized')" id="stat-unauthorized"><div class="stat-num" style="color:var(--orange)" id="stat-unauthorized-n">0</div><div class="stat-label">UNAUTHORIZED</div></div>
+      <div class="stat-card" onclick="filterByStatus('AI-Suspected')" id="stat-ai"><div class="stat-num" style="color:var(--purple)" id="stat-ai-n">0</div><div class="stat-label">AI-SUSPECTED</div></div>
+      <div class="stat-card" onclick="filterByStatus('Confirmed Fake')" id="stat-fake"><div class="stat-num" style="color:var(--red)" id="stat-fake-n">0</div><div class="stat-label">CONFIRMED FAKE</div></div>
+      <div class="stat-card" onclick="toggleNewOnly()" id="stat-new"><div class="stat-num" style="color:var(--yellow)" id="stat-new-n">0</div><div class="stat-label">🆕 NEW</div></div>
+      <div class="stat-card" onclick="filterHighPriority()" id="stat-high"><div class="stat-num" style="color:var(--red)" id="stat-high-n">0</div><div class="stat-label">🔴 HIGH PRI</div></div>
+    </div>
+
+    <div class="controls-row">
+      <input class="search-input" id="db-search" placeholder="🔍 Search title or channel..." oninput="loadDatabase()" />
+      <select class="filter-select" id="sort-select" onchange="loadDatabase()">
+        <option value="date">Sort: Upload Date</option>
+        <option value="subscribers">Sort: Subscribers ↓</option>
+        <option value="views">Sort: Views ↓</option>
+        <option value="priority">Sort: Priority</option>
+      </select>
+      <button class="btn btn-outline btn-sm" onclick="markAllSeen()">✓ Mark All Seen</button>
+      <span id="db-count" style="color:var(--muted);font-size:12px;margin-left:auto"></span>
+    </div>
+
+    <div class="bulk-bar" id="bulk-bar" style="display:none">
+      <span id="bulk-count">0 selected</span>
+      <select class="filter-select" id="bulk-status-select">
+        <option value="">— Set status —</option>
+        <option>Authorized</option><option>Unauthorized</option>
+        <option>AI-Suspected</option><option>Confirmed Fake</option><option>Unreviewed</option>
+      </select>
+      <button class="btn btn-primary btn-sm" onclick="applyBulkStatus()">Apply to Selected</button>
+      <button class="btn btn-outline btn-sm" onclick="clearSelection()">Clear</button>
+    </div>
+
+    <div class="results" id="db-list"></div>
+    <div id="db-empty" class="empty" style="display:none"><div class="empty-icon">🗄</div><div>No videos yet. Click <strong style="color:var(--accent2)">⚡ Scan All Terms</strong> to start.</div></div>
+  </div>
+
+  <!-- SEARCH TAB -->
+  <div id="tab-search" style="display:none">
+    <div class="search-box">
+      <div class="presets-label">PRESET SEARCH TERMS</div>
+      <div class="presets" id="presets"></div>
+      <div class="search-row">
+        <input class="search-input" style="flex:1" id="query-input" placeholder="Or type a custom search..." onkeydown="if(event.key==='Enter') doSearch()" />
+        <button class="btn btn-primary" id="search-btn" onclick="doSearch()">Search</button>
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <div><div style="color:var(--muted);font-size:10px;letter-spacing:0.1em;margin-bottom:4px;">SORT BY</div>
+          <select class="filter-select" id="sort-select-search"><option value="date">Upload Date</option><option value="relevance">Relevance</option><option value="viewCount">View Count</option></select></div>
+        <div><div style="color:var(--muted);font-size:10px;letter-spacing:0.1em;margin-bottom:4px;">UPLOADED</div>
+          <select class="filter-select" id="date-select"><option value="">Any time</option><option value="today">Today</option><option value="week">This week</option><option value="month" selected>This month</option><option value="year">This year</option></select></div>
+        <div style="display:flex;align-items:flex-end;padding-bottom:2px"><span id="results-count" style="color:var(--muted);font-size:12px"></span></div>
+      </div>
+    </div>
+    <div id="search-error" style="display:none" class="error-box"></div>
+    <div class="results" id="search-results"></div>
+    <div id="search-empty" class="empty" style="display:none"><div class="empty-icon">🔍</div><div>No results found.</div></div>
+    <button class="load-more" id="load-more-btn" style="display:none" onclick="loadMore()">Load More</button>
+  </div>
+</main>
+
+<script>
+const PRESETS = ["RSSB satsang","Radha Soami Beas","Baba Gurinder Singh","Hazur Jasdeep Singh","Sant Mat satsang","RSSB discourse","Radha Soami meditation","RSSB bhandara","Sant Mat meditation","Gurinder Singh Dhillon","Babaji RSSB","RSSB kirtan","Dera Beas satsang","RSSB seva","Sant Mat path"];
+const STATUSES = ["Unreviewed","Authorized","Unauthorized","AI-Suspected","Confirmed Fake"];
+const STATUS_STYLES = {
+  "Unreviewed":"color:#8888aa;border-color:#2a2a4a",
+  "Authorized":"color:#4ade80;border-color:#166534;background:rgba(74,222,128,0.1)",
+  "Unauthorized":"color:#fb923c;border-color:#9a3412;background:rgba(251,146,60,0.1)",
+  "AI-Suspected":"color:#e879f9;border-color:#86198f;background:rgba(232,121,249,0.1)",
+  "Confirmed Fake":"color:#f87171;border-color:#991b1b;background:rgba(248,113,113,0.1)",
+};
+
+let activeTab="database", currentFilter="All", onlyNew=false, highPriOnly=false;
+let selectedIds=new Set(), nextPageToken=null;
+
+window.onload=()=>{ renderPresets(); loadDatabase(); loadLastScan(); };
+
+function showTab(tab) {
+  activeTab=tab;
+  document.getElementById("tab-database").style.display=tab==="database"?"":"none";
+  document.getElementById("tab-search").style.display=tab==="search"?"":"none";
+  document.querySelectorAll(".tab").forEach((t,i)=>t.classList.toggle("active",(i===0)===(tab==="database")));
+}
+
+function renderPresets() {
+  const el=document.getElementById("presets");
+  PRESETS.forEach(q=>{
+    const btn=document.createElement("button"); btn.className="preset-btn"; btn.textContent=q;
+    btn.onclick=()=>{ document.getElementById("query-input").value=q; document.querySelectorAll(".preset-btn").forEach(b=>b.classList.remove("active")); btn.classList.add("active"); };
+    el.appendChild(btn);
+  });
+}
+
+async function runAutoScan() {
+  const btn=document.getElementById("autoscan-btn");
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Scanning...';
+  document.getElementById("scan-progress").style.display="";
+  document.getElementById("scan-result").style.display="none"; hideGlobalError();
+  try {
+    const res=await fetch("/api/autoscan",{method:"POST"});
+    const data=await res.json();
+    if(data.error){showGlobalError(data.error);return;}
+    document.getElementById("scan-progress").style.display="none";
+    const el=document.getElementById("scan-result");
+    el.className="success-box";
+    el.innerHTML=`✅ Scan complete! <strong>${data.newFound}</strong> new videos added. <strong style="color:var(--red)">${(data.results||[]).filter(r=>r.added>0 && r.priority==="HIGH").length}</strong> high priority channels detected. ${data.totalExcluded} official excluded.`;
+    el.style.display=""; setTimeout(()=>el.style.display="none",8000);
+    loadDatabase(); loadLastScan();
+  } catch(e){showGlobalError("Scan failed: "+e.message);document.getElementById("scan-progress").style.display="none";}
+  finally{btn.disabled=false;btn.innerHTML="⚡ Scan All Terms";}
+}
+
+async function loadLastScan() {
+  try{const r=await fetch("/api/scan-log");const d=await r.json();if(d){const dt=new Date(d.scanned_at);document.getElementById("last-scan-label").textContent=`Last scan: ${dt.toLocaleDateString()} ${dt.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`;}}catch(e){}
+}
+
+async function loadDatabase() {
+  const search=document.getElementById("db-search").value;
+  const sortBy=document.getElementById("sort-select").value;
+  let url=`/api/videos?status=${encodeURIComponent(currentFilter)}&onlyNew=${onlyNew}&sortBy=${sortBy}`;
+  if(search) url+=`&search=${encodeURIComponent(search)}`;
+  try{
+    const res=await fetch(url); const data=await res.json();
+    updateStats(data.stats); renderDatabase(data.videos);
+    document.getElementById("db-count").textContent=`${data.videos.length} video${data.videos.length!==1?"s":""}`;
+  }catch(e){showGlobalError("Failed to load database.");}
+}
+
+function updateStats(s) {
+  document.getElementById("stat-total").textContent=s.total;
+  document.getElementById("stat-unreviewed-n").textContent=s.unreviewed;
+  document.getElementById("stat-unauthorized-n").textContent=s.unauthorized;
+  document.getElementById("stat-ai-n").textContent=s.aiSuspected;
+  document.getElementById("stat-fake-n").textContent=s.confirmedFake;
+  document.getElementById("stat-new-n").textContent=s.newCount;
+  document.getElementById("stat-high-n").textContent=s.highPriority||0;
+}
+
+function filterByStatus(status) {
+  currentFilter=status; onlyNew=false; highPriOnly=false;
+  document.querySelectorAll(".stat-card").forEach(c=>c.classList.remove("active"));
+  const map={"All":"stat-all","Unreviewed":"stat-unreviewed","Unauthorized":"stat-unauthorized","AI-Suspected":"stat-ai","Confirmed Fake":"stat-fake"};
+  if(map[status]) document.getElementById(map[status]).classList.add("active");
+  loadDatabase();
+}
+
+function toggleNewOnly(){onlyNew=!onlyNew;currentFilter="All";document.querySelectorAll(".stat-card").forEach(c=>c.classList.remove("active"));document.getElementById(onlyNew?"stat-new":"stat-all").classList.add("active");loadDatabase();}
+function filterHighPriority(){currentFilter="All";onlyNew=false;document.getElementById("sort-select").value="subscribers";document.querySelectorAll(".stat-card").forEach(c=>c.classList.remove("active"));document.getElementById("stat-high").classList.add("active");loadDatabase();}
+async function markAllSeen(){await fetch("/api/videos?action=mark-seen",{method:"POST"});loadDatabase();}
+
+function fmtNum(n){n=parseInt(n||0);if(n>=1000000)return(n/1000000).toFixed(1)+"M";if(n>=1000)return(n/1000).toFixed(1)+"K";return n||"–";}
+function timeAgo(d){const diff=(Date.now()-new Date(d))/1000;if(diff<3600)return Math.floor(diff/60)+"m ago";if(diff<86400)return Math.floor(diff/3600)+"h ago";if(diff<2592000)return Math.floor(diff/86400)+"d ago";if(diff<31536000)return Math.floor(diff/2592000)+"mo ago";return Math.floor(diff/31536000)+"y ago";}
+
+function renderDatabase(videos) {
+  const list=document.getElementById("db-list");
+  const empty=document.getElementById("db-empty");
+  list.innerHTML="";
+  if(!videos.length){empty.style.display="";return;}
+  empty.style.display="none";
+  videos.forEach(v=>{
+    const isNew=v.is_new===1;
+    const priority=v.priority||"LOW";
+    const card=document.createElement("div");
+    card.className=`video-card${selectedIds.has(v.id)?" selected":""}${isNew?" is-new":""}`;
+    card.id=`dbcard-${v.id}`;
+    const statusOpts=STATUSES.map(s=>`<option value="${s}" ${v.status===s?"selected":""}>${s}</option>`).join("");
+    card.innerHTML=`
+      <div class="card-check"><input type="checkbox" ${selectedIds.has(v.id)?"checked":""} onchange="toggleSelect('${v.id}',this)" /></div>
+      <div class="video-thumb">
+        <a href="${v.url}" target="_blank"><img src="${v.thumbnail}" alt="" onerror="this.style.display='none'" /></a>
+        ${isNew?'<div class="new-dot">NEW</div>':""}
+      </div>
+      <div class="video-info">
+        <a class="video-title" href="${v.url}" target="_blank">${escHtml(v.title)}</a>
+        <div class="video-meta">
+          <a class="channel-link" href="${v.channel_url}" target="_blank">📺 ${escHtml(v.channel)}</a>
+          <a class="about-link" href="${v.channel_about_url||`https://youtube.com/channel/${v.channel_id}/about`}" target="_blank" title="Check About page for contact email">📋 About</a>
+          <span class="sep">•</span> 👥 <span class="sub-count">${fmtNum(v.subscriber_count)} subs</span>
+          <span class="sep">•</span> 👁 ${fmtNum(v.view_count)}
+          <span class="sep">•</span> 🕐 ${timeAgo(v.published_at)}
+          <span class="sep">•</span> ${v.video_type==="short"?"📱 Short":"🎬 Video"}
+        </div>
+        <div class="status-row">
+          <span class="priority-badge priority-${priority}">${priority==="HIGH"?"🔴":"priority"==="MEDIUM"?"🟠":"🟢"} ${priority}</span>
+          <span class="status-badge" style="${STATUS_STYLES[v.status]||""}">${v.status}</span>
+          ${isNew?'<span style="color:var(--yellow);font-size:10px;font-weight:700">🆕 NEW</span>':""}
+        </div>
+        <textarea class="notes-input" rows="1" placeholder="Add notes..." onchange="saveNotes('${v.id}',this.value)">${escHtml(v.notes||"")}</textarea>
+      </div>
+      <div class="video-actions">
+        <select class="status-select-card" onchange="updateStatus('${v.id}',this.value,'${escHtml(v.notes||"")}')">
+          ${statusOpts}
+        </select>
+        <a class="btn-watch" href="${v.url}" target="_blank">▶ Watch</a>
+        <a class="btn-watch" href="${v.channel_about_url||`https://youtube.com/channel/${v.channel_id}/about`}" target="_blank" style="color:#60a5fa;border-color:#1e3a5f;">📋 Find Email</a>
+        <button class="btn-delete" onclick="deleteVideo('${v.id}')">🗑 Delete</button>
+      </div>`;
+    list.appendChild(card);
+  });
+}
+
+function toggleSelect(id,cb){if(cb.checked)selectedIds.add(id);else selectedIds.delete(id);document.getElementById(`dbcard-${id}`)?.classList.toggle("selected",cb.checked);updateBulkBar();}
+function updateBulkBar(){const bar=document.getElementById("bulk-bar");bar.style.display=selectedIds.size>0?"":"none";document.getElementById("bulk-count").textContent=`${selectedIds.size} selected`;}
+function clearSelection(){selectedIds.clear();document.querySelectorAll(".card-check input").forEach(cb=>cb.checked=false);document.querySelectorAll(".video-card").forEach(c=>c.classList.remove("selected"));updateBulkBar();}
+async function applyBulkStatus(){const status=document.getElementById("bulk-status-select").value;if(!status||!selectedIds.size)return;await fetch("/api/videos",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ids:[...selectedIds],status})});clearSelection();loadDatabase();}
+async function updateStatus(id,status,notes){await fetch(`/api/videos/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({status,notes})});loadDatabase();}
+async function saveNotes(id,notes){const card=document.getElementById(`dbcard-${id}`);const status=card?.querySelector(".status-select-card")?.value||"Unreviewed";await fetch(`/api/videos/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({status,notes})});}
+async function deleteVideo(id){if(!confirm("Delete this entry?"))return;await fetch(`/api/videos/${id}`,{method:"DELETE"});loadDatabase();}
+
+// SEARCH
+function getPublishedAfter(f){const now=new Date();const map={today:new Date(new Date().setHours(0,0,0,0)),week:new Date(now-7*86400000),month:new Date(now-30*86400000),year:new Date(now-365*86400000)};return map[f]?map[f].toISOString():"";}
+
+async function doSearch(pageToken=null,append=false){
+  const query=document.getElementById("query-input").value.trim();
+  if(!query)return;
+  const btn=document.getElementById("search-btn");
+  btn.disabled=true;btn.innerHTML='<span class="spinner"></span>';
+  document.getElementById("search-error").style.display="none";
+  if(!append){document.getElementById("search-results").innerHTML="";document.getElementById("search-empty").style.display="none";}
+  try{
+    const sort=document.getElementById("sort-select-search").value;
+    const df=document.getElementById("date-select").value;
+    let url=`/api/search?q=${encodeURIComponent(query)}&order=${sort}`;
+    if(getPublishedAfter(df))url+=`&publishedAfter=${getPublishedAfter(df)}`;
+    if(pageToken)url+=`&pageToken=${pageToken}`;
+    const res=await fetch(url);const data=await res.json();
+    if(data.error){document.getElementById("search-error").textContent=data.error;document.getElementById("search-error").style.display="";return;}
+    nextPageToken=data.nextPageToken||null;
+    if(data.pageInfo?.totalResults)document.getElementById("results-count").textContent=`~${data.pageInfo.totalResults.toLocaleString()} results`;
+    const items=data.items||[];
+    if(!items.length&&!append)document.getElementById("search-empty").style.display="";
+    else renderSearchResults(items);
+    document.getElementById("load-more-btn").style.display=nextPageToken?"":"none";
+  }catch(e){document.getElementById("search-error").textContent="Error: "+e.message;document.getElementById("search-error").style.display="";}
+  finally{btn.disabled=false;btn.textContent="Search";}
+}
+
+function loadMore(){doSearch(nextPageToken,true);}
+
+function renderSearchResults(items){
+  const list=document.getElementById("search-results");
+  items.forEach(item=>{
+    const id=item.id.videoId;const s=item.snippet;
+    const priority=item.priority||"LOW";
+    const card=document.createElement("div");
+    card.className="search-result-card";
+    card.innerHTML=`
+      <div class="video-thumb"><a href="https://youtube.com/watch?v=${id}" target="_blank"><img src="${s.thumbnails?.medium?.url||""}" style="width:130px;height:73px;object-fit:cover;border-radius:6px;display:block" /></a></div>
+      <div class="video-info">
+        <a class="video-title" href="https://youtube.com/watch?v=${id}" target="_blank">${escHtml(s.title)}</a>
+        ${item.isOfficial?'<span class="official-badge">✓ OFFICIAL RSSB</span>':""}
+        <div class="video-meta">
+          <a class="channel-link" href="https://youtube.com/channel/${s.channelId}" target="_blank">📺 ${escHtml(s.channelTitle)}</a>
+          <a class="about-link" href="${item.channelAboutUrl||`https://youtube.com/channel/${s.channelId}/about`}" target="_blank">📋 About</a>
+          <span class="sep">•</span> 👥 <span class="sub-count">${fmtNum(item.subscriberCount)} subs</span>
+          ${item.viewCount?`<span class="sep">•</span> 👁 ${fmtNum(item.viewCount)}`:""}
+          <span class="sep">•</span> 🕐 ${timeAgo(s.publishedAt)}
+          <span class="sep">•</span> ${item.videoType==="short"?"📱 Short":"🎬 Video"}
+        </div>
+        <span class="priority-badge priority-${priority}">${priority==="HIGH"?"🔴":priority==="MEDIUM"?"🟠":"🟢"} ${priority} PRIORITY</span>
+        ${item.dbStatus?`<span class="status-badge" style="${STATUS_STYLES[item.dbStatus]||""}">${item.dbStatus}</span>`:""}
+      </div>
+      <div class="video-actions">
+        <button class="btn-save-card ${item.dbStatus?"saved":""}" id="savebtn-${id}" onclick="saveToDb(event,'${id}')">
+          ${item.dbStatus?"✓ In DB":"💾 Save"}
+        </button>
+        <a class="btn-watch" href="https://youtube.com/watch?v=${id}" target="_blank">▶ Watch</a>
+        <a class="btn-watch" href="${item.channelAboutUrl||`https://youtube.com/channel/${s.channelId}/about`}" target="_blank" style="color:#60a5fa;border-color:#1e3a5f;font-size:10px;">📋 Find Email</a>
+      </div>`;
+    list.appendChild(card);
+  });
+}
+
+async function saveToDb(e,videoId){const btn=e.target;btn.disabled=true;btn.textContent="Saving...";try{await fetch("/api/videos",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ids:[videoId],status:"Unreviewed"})});btn.className="btn-save-card saved";btn.textContent="✓ In DB";}catch(e){btn.disabled=false;btn.textContent="💾 Save";}}
+
+function escHtml(s){return(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function showGlobalError(msg){const e=document.getElementById("error-global");e.textContent=msg;e.style.display="";}
+function hideGlobalError(){document.getElementById("error-global").style.display="none";}
+</script>
+</body>
+</html>
