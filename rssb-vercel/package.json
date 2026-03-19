@@ -1,6 +1,8 @@
 {
-  "rewrites": [
-    { "source": "/api/:path*", "destination": "/api/:path*" },
-    { "source": "/(.*)", "destination": "/public/index.html" }
-  ]
-}
+  "name": "rssb-video-monitor",
+  "version": "3.0.0",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "node-fetch": "^2.7.0",
+    "nodemailer": "^6.9.8"
+  }
