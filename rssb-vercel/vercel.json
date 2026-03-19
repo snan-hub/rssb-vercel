@@ -1,6 +1,11 @@
 {
+  "version": 2,
   "rewrites": [
-    { "source": "/api/:path*", "destination": "/api/:path*" },
+    { "source": "/api/autoscan", "destination": "/api/autoscan" },
+    { "source": "/api/videos", "destination": "/api/videos" },
+    { "source": "/api/search", "destination": "/api/search" },
+    { "source": "/api/scan-log", "destination": "/api/scan-log" },
+    { "source": "/api/export", "destination": "/api/export" },
     { "source": "/(.*)", "destination": "/public/index.html" }
   ]
 }
